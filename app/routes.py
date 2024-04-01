@@ -45,8 +45,10 @@ def get_response(job_id):
 def is_done(job_id):
     # TODO
     # Check if job_id is done
+    print("TASK DONE:      ----------------------------")
+    print(webserver.tasks_runner.task_done)
     if webserver.tasks_runner.task_done.get(job_id):
-        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA IT S DONE")
+        print("IT S DONE")
         return True
     return False
 

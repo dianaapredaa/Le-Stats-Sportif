@@ -6,17 +6,6 @@ import os
 import multiprocessing
 import json
 
-allowed_questions = {
-            'Percent of adults who engage in no leisure-time physical activity',
-            'Percent of adults aged 18 years and older who have obesity',
-            'Percent of adults aged 18 years and older who have an overweight classification',
-            'Percent of adults who achieve at least 150 minutes a week of moderate-intensity aerobic physical activity or 75 minutes a week of vigorous-intensity aerobic physical activity and engage in muscle-strengthening activities on 2 or more days a week',
-            'Percent of adults who achieve at least 150 minutes a week of moderate-intensity aerobic physical activity or 75 minutes a week of vigorous-intensity aerobic activity (or an equivalent combination)',
-            'Percent of adults who engage in muscle-strengthening activities on 2 or more days a week',
-            'Percent of adults who report consuming fruit less than one time daily',
-            'Percent of adults who report consuming vegetables less than one time daily'
-        }
-
 class ThreadPool:
     def __init__(self):
         # You must implement a ThreadPool of TaskRunners
@@ -84,7 +73,7 @@ class TaskRunner(Thread):
             except Exception as e:
                 print(f"Error processing task {task.job_id}: {e}")
             finally:
-                self.task_done[task.job_id] = deepcopy(task)
+                self.task_done[task.job_id] = task
 
 class Task:
     def __init__(self, job_id, data, data_ingestor, request_type):
@@ -92,7 +81,6 @@ class Task:
         self.data = data
         self.data_ingestor = data_ingestor
         self.request_type = request_type
-
         self.result = None
 
     def execute(self):
@@ -106,7 +94,3 @@ class Task:
         result_path = f"{result_dir}/{self.job_id}.json"
         with open(result_path, 'w') as file:
             json.dump({'job_id': self.job_id, 'question': self.question, 'state': self.state, 'result': self.result}, file)
-
-    def get_result(self):
-        print(self.result)
-        return self.result

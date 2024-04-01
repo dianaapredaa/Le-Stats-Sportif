@@ -98,62 +98,67 @@ class DataIngestor:
 
     def states_mean_request(self, question: str):
         # Get all data corresponding to the question
-        data_valid = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
+        filtered_data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
         # Get all states
-        states = list(set([d['LocationDesc'] for d in data_valid]))
+        states = list(set([d['LocationDesc'] for d in filtered_data]))
 
         # Get the mean for each state
         mean_by_state = {}
-        mean_by_state_divisor = {}
+
         # Go through all the data
-        for d in data_valid:
+        for d in filtered_data:
             state = d['LocationDesc']
             mean = float(d['Data_Value'])
+            # add state to the dictionary if it doesn't exist
             if state not in mean_by_state:
-                mean_by_state[state] = 0
-                mean_by_state_divisor[state] = 0
-            mean_by_state[state] += mean
-            mean_by_state_divisor[state] += 1
+                mean_by_state[state] = { 'mean': 0, 'divisor': 0}
+            mean_by_state[state]['mean'] += mean
+            mean_by_state[state]['divisor'] += 1
 
+        # Calculate the mean for each state
         for state in states:
-            mean_by_state[state] /= mean_by_state_divisor[state]
+            mean_by_state[state] = mean_by_state[state]['mean'] / mean_by_state[state]['divisor']
 
         return mean_by_state
     
     def state_mean_request(self, question: str, state: str):
         # Get all data corresponding to the question
-        data = [d for d in self.data if d['Question'] == question and d['LocationDesc'] == state and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
+        filtered_data = [d for d in self.data if d['Question'] == question and d['LocationDesc'] == state and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
-        # Get the mean for the state
-        mean = sum([float(d['Data_Value']) for d in data]) / len(data)
-        
+        # Calculate the mean for the state
+        values_sum = sum(float(d['Data_Value']) for d in filtered_data)
+        count = len(filtered_data)
+        mean = values_sum / count if count else 0
+            
         return mean
     
     def best5_request(self, question: str):
         # Get all data corresponding to the question
-        data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
+        filtered_data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
         # Get the best 5 states
-        best5 = sorted(data, key=lambda x: x['Data_Value'])[:5]
+        best5 = sorted(filtered_data, key=lambda x: float(x['Data_Value']), reverse=True)[:5]
         
         return best5
     
     def worst5_request(self, question: str):
         # Get all data corresponding to the question
-        data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
+        filtered_data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
         # Get the worst 5 states
-        worst5 = sorted(data, key=lambda x: x['Data_Value'])[-5:]
+        worst5 = sorted(filtered_data, key=lambda x: float(x['Data_Value']), reverse=False)[:5]
         
         return worst5
     
     def global_mean_request(self, question: str):
         # Get all data corresponding to the question
-        data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
+        filtered_data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
         # Get the global mean
-        mean = sum([float(d['Data_Value']) for d in data]) / len(data)
+        values_sum = sum([float(d['Data_Value']) for d in filtered_data])
+        count = len(filtered_data)
+        mean = values_sum / count if count else 0
         
         return mean
     
@@ -162,11 +167,12 @@ class DataIngestor:
         global_mean = self.global_mean_request(question)
 
         # Get all data corresponding to the question
-        data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
+        filtered_data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
-        # Get the difference from the global mean for each state
+        # Compute the difference from the global mean for each state
         diff_by_state = {}
-        for d in data:
+
+        for d in filtered_data:
             state = d['LocationDesc']
             mean = float(d['Data_Value'])
             diff_by_state[state] = mean - global_mean
@@ -178,33 +184,43 @@ class DataIngestor:
         global_mean = self.global_mean_request(question)
         
         # Get all data corresponding to the question and state
-        data = [d for d in self.data if d['Question'] == question and d['LocationDesc'] == state and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
+        filtered_data = [d for d in self.data if d['Question'] == question and d['LocationDesc'] == state and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
         # Get the state mean
-        state_mean = sum([float(d['Data_Value']) for d in data]) / len(data)
+        values_sum = sum([float(d['Data_Value']) for d in filtered_data])
+        count = len(filtered_data)
+        state_mean = values_sum / count if count else 0
 
-        # Get the difference from the global mean for the state
+        # Calculate the difference from the global mean
         diff = state_mean - global_mean
 
         return diff
     
     def mean_by_category_request(self, question: str, category: str):   
         # Get all data corresponding to the question
-        data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
+        filtered_data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
         # Get all categories
-        categories = list(set([d['StratificationCategory1'] for d in data]))
+        categories = list(set([d['StratificationCategory1'] for d in filtered_data]))
 
         # Get the mean for each category
         mean_by_category = {}
         mean_by_category_divisor = {}
 
         for category in categories:
-            category_data = [d for d in data if d['StratificationCategory1'] == category]
-            mean = sum([float(d['Data_Value']) for d in category_data]) / len(category_data)
+            # Get the data for the category
+            category_data = [d for d in filtered_data if d['StratificationCategory1'] == category]
+
+            # Compute the mean
+            values_sum = sum([float(d['Data_Value']) for d in category_data])
+            count = len(category_data)
+            mean = values_sum / count if count else 0
+
+            # Compute the mean for the category
             mean_by_category[category] += mean
             mean_by_category_divisor[category] += 1
 
+        # Calculate the mean for each category
         for category in categories:
             mean_by_category[category] /= mean_by_category_divisor[category]
 
@@ -212,21 +228,29 @@ class DataIngestor:
     
     def state_mean_by_category_request(self, question: str, state: str, category: str):
         # Get all data corresponding to the question and state
-        data = [d for d in self.data if d['Question'] == question and d['LocationDesc'] == state and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
+        filtered_data = [d for d in self.data if d['Question'] == question and d['LocationDesc'] == state and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
         # Get all categories
-        categories = list(set([d['StratificationCategory1'] for d in data]))
+        categories = list(set([d['StratificationCategory1'] for d in filtered_data]))
 
         # Get the mean for each category
         mean_by_category = {}
         mean_by_category_divisor = {}
 
         for category in categories:
-            category_data = [d for d in data if d['StratificationCategory1'] == category]
-            mean = sum([float(d['Data_Value']) for d in category_data]) / len(category_data)
+            # Get the data for the category
+            category_data = [d for d in filtered_data if d['StratificationCategory1'] == category]
+
+            # Compute the mean
+            values_sum = sum([float(d['Data_Value']) for d in category_data])
+            count = len(category_data)
+            mean = values_sum / count if count else 0
+
+            # Compute the mean for the category
             mean_by_category[category] += mean
             mean_by_category_divisor[category] += 1
 
+        # Calculate the mean for each category
         for category in categories:
             mean_by_category[category] /= mean_by_category_divisor[category]
 
