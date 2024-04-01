@@ -1,0 +1,4 @@
+checker/
+tests/
+unittests/
+venv/
