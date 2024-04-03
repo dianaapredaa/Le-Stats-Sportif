@@ -33,9 +33,7 @@ class ThreadPool:
         
     def add_task(self, task):
         # Add task to the queue
-        print(f"Adding task {task.job_id} to queue")
         self.task_queue.put(task)
-        print(f"Task {task.job_id} added to queue")
 
     def wait_completion(self):
         # Block until all tasks are done
@@ -43,7 +41,8 @@ class ThreadPool:
 
     def shutdown(self):
         # Signal to all threads to gracefully shutdown
-        for _ in range(self.num_threads):
+        # for _ in range(self.num_threads):
+        for _ in range(1):
             self.task_queue.put(None)
         for thread in self.threads:
             thread.join()

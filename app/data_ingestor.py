@@ -82,7 +82,7 @@ class DataIngestor:
         elif request_type == 'state_mean_request':
             return self.state_mean_request(question, req_data['state'])
         elif request_type == 'best5_request':
-            return self.best5_request(question)
+            return self.best5_request(question, )
         elif request_type == 'worst5_request':
             return self.worst5_request(question)
         elif request_type == 'global_mean_request':
@@ -90,7 +90,7 @@ class DataIngestor:
         elif request_type == 'diff_from_mean_request':
             return self.diff_from_mean_request(question)
         elif request_type == 'state_diff_from_mean_request':
-            return self.state_diff_from_mean_request(question)
+            return self.state_diff_from_mean_request(question, req_data['state'])
         elif request_type == 'mean_by_category_request':
             return self.mean_by_category_request(question)
         elif request_type == 'state_mean_by_category_request':
@@ -110,9 +110,12 @@ class DataIngestor:
         for d in filtered_data:
             state = d['LocationDesc']
             mean = float(d['Data_Value'])
-            # add state to the dictionary if it doesn't exist
+
+            # Add state to the dictionary if it doesn't exist
             if state not in mean_by_state:
                 mean_by_state[state] = { 'mean': 0, 'divisor': 0}
+
+            # Add the value to the total and increment the count
             mean_by_state[state]['mean'] += mean
             mean_by_state[state]['divisor'] += 1
 
@@ -129,27 +132,77 @@ class DataIngestor:
         # Calculate the mean for the state
         values_sum = sum(float(d['Data_Value']) for d in filtered_data)
         count = len(filtered_data)
+
         mean = values_sum / count if count else 0
             
-        return mean
+        return {state: mean}
     
     def best5_request(self, question: str):
-        # Get all data corresponding to the question
+        # Filter data based on the question and year range
         filtered_data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
-        # Get the best 5 states
-        best5 = sorted(filtered_data, key=lambda x: float(x['Data_Value']), reverse=True)[:5]
-        
-        return best5
+        # Combine aggregation and mean calculation for each state
+        state_aggregates = {}
+        for entry in filtered_data:
+            state = entry['LocationDesc']
+            value = float(entry['Data_Value'])
+
+            # Add state to the dictionary if it doesn't exist
+            if state not in state_aggregates:
+                state_aggregates[state] = {'mean': 0, 'divisor': 0}
+
+            # Add the value to the total and increment the count
+            state_aggregates[state]['mean'] += value
+            state_aggregates[state]['divisor'] += 1
+
+        # Calculate mean for each state in a more compact form
+        state_means = {state: aggregates['mean'] / aggregates['divisor'] for state, aggregates in state_aggregates.items()}
+
+        # Determine if the best values are the highest or lowest
+        min_max = 'min' if question in self.questions_best_is_min else 'max'
+
+        # Sort states by their mean values
+        if min_max == 'max':
+            sorted_means = dict(sorted(state_means.items(), key=lambda item: item[1], reverse=True))
+        else:
+            sorted_means = dict(sorted(state_means.items(), key=lambda item: item[1], reverse=False))
+
+        # Select the top 5 states based on the sorted order
+        best5_states = dict(list(sorted_means.items())[:5])
+
+        return best5_states
+
     
     def worst5_request(self, question: str):
-        # Get all data corresponding to the question
+        # Filter data based on the question and year range
         filtered_data = [d for d in self.data if d['Question'] == question and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
-        # Get the worst 5 states
-        worst5 = sorted(filtered_data, key=lambda x: float(x['Data_Value']), reverse=False)[:5]
-        
-        return worst5
+        # Combine aggregation and mean calculation for each state
+        state_aggregates = {}
+        for entry in filtered_data:
+            state = entry['LocationDesc']
+            value = float(entry['Data_Value'])
+            if state not in state_aggregates:
+                state_aggregates[state] = {'mean': 0, 'divisor': 0}
+            state_aggregates[state]['mean'] += value
+            state_aggregates[state]['divisor'] += 1
+
+        # Calculate mean for each state in a more compact form
+        state_means = {state: aggregates['mean'] / aggregates['divisor'] for state, aggregates in state_aggregates.items()}
+
+        # Determine if the best values are the highest or lowest
+        min_max = 'min' if question in self.questions_best_is_min else 'max'
+
+        # Sort states by their mean values
+        if min_max == 'max':
+            sorted_means = dict(sorted(state_means.items(), key=lambda item: item[1], reverse=True))
+        else:
+            sorted_means = dict(sorted(state_means.items(), key=lambda item: item[1], reverse=False))
+
+        # Select the top 5 states based on the sorted order
+        worst5_states = dict(list(sorted_means.items())[-5:])
+
+        return worst5_states
     
     def global_mean_request(self, question: str):
         # Get all data corresponding to the question
@@ -158,9 +211,10 @@ class DataIngestor:
         # Get the global mean
         values_sum = sum([float(d['Data_Value']) for d in filtered_data])
         count = len(filtered_data)
+
         mean = values_sum / count if count else 0
         
-        return mean
+        return {'global_mean': mean}
     
     def diff_from_mean_request(self, question: str):
         # Get the global mean
@@ -194,7 +248,7 @@ class DataIngestor:
         # Calculate the difference from the global mean
         diff = state_mean - global_mean
 
-        return diff
+        return {state: diff}
     
     def mean_by_category_request(self, question: str, category: str):   
         # Get all data corresponding to the question
