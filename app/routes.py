@@ -162,30 +162,52 @@ def diff_from_mean_request():
 def state_diff_from_mean_request():
     # TODO
     # Get request data
+    data = request.json
+
     # Register job. Don't wait for task to finish
     # Increment job_id counter
-    # Return associated job_id
+    job_id = webserver.job_counter
+    webserver.job_counter += 1
 
-    return jsonify({"status": "NotImplemented"})
+    task = Task(job_id, data, webserver.data_ingestor, 'state_diff_from_mean_request')
+        
+    # Return associated job_id
+    webserver.tasks_runner.add_task(task)
+    return jsonify({"job_id": job_id})
 
 @webserver.route('/api/mean_by_category', methods=['POST'])
 def mean_by_category_request():
     # TODO
     # Get request data
+    data = request.json
+
     # Register job. Don't wait for task to finish
     # Increment job_id counter
-    # Return associated job_id
+    job_id = webserver.job_counter
+    webserver.job_counter += 1
 
-    return jsonify({"status": "NotImplemented"})
+    task = Task(job_id, data, webserver.data_ingestor, 'mean_by_category_request')
+        
+    # Return associated job_id
+    webserver.tasks_runner.add_task(task)
+    return jsonify({"job_id": job_id})
 
 @webserver.route('/api/state_mean_by_category', methods=['POST'])
 def state_mean_by_category_request():
     # TODO
     # Get request data
+    data = request.json
+
     # Register job. Don't wait for task to finish
     # Increment job_id counter
+    job_id = webserver.job_counter
+    webserver.job_counter += 1
+
+    task = Task(job_id, data, webserver.data_ingestor, 'state_mean_by_category_request')
+        
     # Return associated job_id
-    return jsonify({"status": "NotImplemented"})
+    webserver.tasks_runner.add_task(task)
+    return jsonify({"job_id": job_id})
 
 # You can check localhost in your browser to see what this displays
 @webserver.route('/')
@@ -209,3 +231,8 @@ def get_defined_routes():
         routes.append(f"Endpoint: \"{rule}\" Methods: \"{methods}\"")
     return routes
 
+@webserver.route('/api/graceful_shutdown', methods=['GET'])
+def graceful_shutdown():
+    # Call function to initiate shutdown
+    webserver.tasks_runner.shutdown()
+    return jsonify({"message": "Shutting down gracefully"})

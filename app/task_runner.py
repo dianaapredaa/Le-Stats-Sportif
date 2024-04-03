@@ -23,7 +23,7 @@ class ThreadPool:
         self.threads = []
         self.condition = Event()
         # Dictionary to keep track of completed tasks
-        self.task_done = {}  # job_id: Task
+        self.task_done = {}  # job_id: Task 
 
         # Create and start threads
         for _ in range(self.num_threads):
@@ -41,7 +41,6 @@ class ThreadPool:
 
     def shutdown(self):
         # Signal to all threads to gracefully shutdown
-        # for _ in range(self.num_threads):
         for _ in range(1):
             self.task_queue.put(None)
         for thread in self.threads:
