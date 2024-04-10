@@ -1,79 +1,90 @@
-from copy import deepcopy
-from queue import Queue
+"""
+task_runner.py module contains the ThreadPool and TaskRunner classes that are used to manage
+the execution of tasks in the application.
+"""
 from threading import Thread, Event
-import time
-import os
 import multiprocessing
+import os
 import json
+from queue import Queue
 
 class ThreadPool:
+    """
+    ThreadPool class is used to manage the execution of tasks in the application.
+    """
     def __init__(self):
-        # You must implement a ThreadPool of TaskRunners
-        # Your ThreadPool should check if an environment variable TP_NUM_OF_THREADS is defined
-        # If the env var is defined, that is the number of threads to be used by the thread pool
-        # Otherwise, you are to use what the hardware concurrency allows
-        # You are free to write your implementation as you see fit, but
-        # You must NOT:
-        #   * create more threads than the hardware concurrency allows
-        #   * recreate threads for each task
-
-        # Get the number of threads from environment variable if defined, else use hardware concurrency
+        """
+        Initialize the thread pool with the number of threads specified in the environment variable
+        TP_NUM_OF_THREADS. If the environment variable is not set, the number of threads will be set
+        to the number of CPUs on the system.
+        """
         self.num_threads = int(os.getenv('TP_NUM_OF_THREADS', multiprocessing.cpu_count()))
         self.task_queue = Queue()
+        self.shutdown_event = Event()
         self.threads = []
-        self.condition = Event()
-        # Dictionary to keep track of completed tasks
-        self.task_done = {}  # job_id: Task 
+        self.task_done = {}
 
-        # Create and start threads
+        self.shutdown_event.clear()
+
+        # Initialize and start threads
         for _ in range(self.num_threads):
-            thread = TaskRunner(self.task_queue, self.condition, self.task_done)
+            thread = TaskRunner(self.task_queue, self.shutdown_event, self.task_done)
             thread.start()
             self.threads.append(thread)
-        
-    def add_task(self, task):
-        # Add task to the queue
-        self.task_queue.put(task)
 
-    def wait_completion(self):
-        # Block until all tasks are done
-        self.task_queue.join()
+    def add_task(self, task):
+        """
+        Add a task to the task queue.
+        """
+        if not self.shutdown_event.is_set():
+            self.task_queue.put(task)
 
     def shutdown(self):
-        # Signal to all threads to gracefully shutdown
-        for _ in range(1):
+        """ 
+        Shutdown the thread pool.
+        """
+        self.shutdown_event.set()
+        for _ in self.threads:
             self.task_queue.put(None)
         for thread in self.threads:
             thread.join()
 
 class TaskRunner(Thread):
-    def __init__(self, task_queue: Queue, event: Event, task_done: dict):
-        # TODO: init necessary data structures
+    """
+    TaskRunner class is used to execute tasks in a separate thread.
+    """
+    def __init__(self, task_queue, shutdown_event, task_done):
+        """
+        Initialize the TaskRunner with the task queue, shutdown event, and task_done dictionary.
+        """
         super().__init__()
         self.task_queue = task_queue
-        self.event = event
+        self.shutdown_event = shutdown_event
         self.task_done = task_done
+        self.has_task = False
 
     def run(self):
-        while True:
-            # TODO
-            # Get pending job
-            # Execute the job and save the result to disk
-            # Repeat until graceful_shutdown
+        """
+        Run the TaskRunner thread.
+        """
+        while not self.shutdown_event.is_set():
             task = self.task_queue.get()
-            # Check if it's time to shutdown
-            if self.event.is_set():
+            if task is None:  # Allow exiting the thread
                 break
-
-            # Execute the job and save the result to disk
             try:
+                self.has_task = True
+                self.task_done[task.job_id] = False
                 task.execute()
+                task.save_result()
+                self.task_done[task.job_id] = True
+                self.has_task = False
             except Exception as e:
                 print(f"Error processing task {task.job_id}: {e}")
-            finally:
-                self.task_done[task.job_id] = task
 
 class Task:
+    """
+    Task class is used to represent a task that needs to be executed.
+    """
     def __init__(self, job_id, data, data_ingestor, request_type):
         self.job_id = job_id
         self.data = data
@@ -82,13 +93,19 @@ class Task:
         self.result = None
 
     def execute(self):
+        """
+        Execute the task.
+        """
+        # Process the question with given data and request type
         self.result = self.data_ingestor.process_question(self.data, self.request_type)
-        
+
     def save_result(self):
-        # Save result to disk
+        """
+        Save the result to a JSON file.
+        """
+        # Save the result to a JSON file
         result_dir = "results"
-        if not os.path.exists(result_dir):
-            os.makedirs(result_dir)
-        result_path = f"{result_dir}/{self.job_id}.json"
-        with open(result_path, 'w') as file:
-            json.dump({'job_id': self.job_id, 'question': self.question, 'state': self.state, 'result': self.result}, file)
+        os.makedirs(result_dir, exist_ok=True)
+        result_path = os.path.join(result_dir, f"{self.job_id}.json")
+        with open(result_path, 'w', encoding='utf-8') as file:
+            json.dump(self.result, file)
