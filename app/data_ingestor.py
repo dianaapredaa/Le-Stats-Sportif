@@ -72,24 +72,24 @@ class DataIngestor:
 
         if request_type == 'states_mean_request':
             return self.states_mean_request(question)
-        elif request_type == 'state_mean_request':
+        if request_type == 'state_mean_request':
             return self.state_mean_request(question, req_data['state'])
-        elif request_type == 'best5_request':
+        if request_type == 'best5_request':
             return self.best5_request(question, )
-        elif request_type == 'worst5_request':
+        if request_type == 'worst5_request':
             return self.worst5_request(question)
-        elif request_type == 'global_mean_request':
+        if request_type == 'global_mean_request':
             return self.global_mean_request(question)
-        elif request_type == 'diff_from_mean_request':
+        if request_type == 'diff_from_mean_request':
             return self.diff_from_mean_request(question)
-        elif request_type == 'state_diff_from_mean_request':
+        if request_type == 'state_diff_from_mean_request':
             return self.state_diff_from_mean_request(question, req_data['state'])
-        elif request_type == 'mean_by_category_request':
+        if request_type == 'mean_by_category_request':
             return self.mean_by_category_request(question)
-        elif request_type == 'state_mean_by_category_request':
+        if request_type == 'state_mean_by_category_request':
             return self.state_mean_by_category_request(question, req_data['state'])
-        else:
-            return {'error': 'Invalid request type'}
+
+        return {'error': 'Invalid request type'}
 
     def states_mean_request(self, question: str):
         """
@@ -100,7 +100,7 @@ class DataIngestor:
                          d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
         # Get all states
-        states = list(set([d['LocationDesc'] for d in filtered_data]))
+        states = list(set(d['LocationDesc'] for d in filtered_data))
 
         # Get the mean for each state
         mean_by_state = {}
@@ -227,10 +227,8 @@ class DataIngestor:
                          and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
         # Get the global mean
-        values_sum = sum([float(d['Data_Value']) for d in filtered_data])
-        count = len(filtered_data)
-
-        mean = values_sum / count if count else 0
+        mean = sum(float(d['Data_Value']) for d in filtered_data) \
+            / len(filtered_data) if filtered_data else 0
 
         return {'global_mean': mean}
 
@@ -242,9 +240,8 @@ class DataIngestor:
                          and d['YearStart'] >= '2011' and d['YearEnd'] <= '2022']
 
         # Calculate the global mean
-        values_sum = sum([float(d['Data_Value']) for d in filtered_data])
-        count = len(filtered_data)
-        global_mean = values_sum / count if count else 0
+        global_mean = sum(float(d['Data_Value']) for d in filtered_data) \
+            / len(filtered_data) if filtered_data else 0
 
         # Calculate mean for each state
         state_means = {}
@@ -348,8 +345,8 @@ class DataIngestor:
                         mean_values[category][category_segment] = {}
 
                     # Calculate the mean and store it
-                    calculated_mean = data['mean'] / data['divisor'] if data['divisor'] else 0
-                    mean_values[category][category_segment][state] = calculated_mean
+                    mean_values[category][category_segment][state] =\
+                        data['mean'] / data['divisor'] if data['divisor'] else 0
 
         # Normalize result to: "('state', 'category', 'category_segment')": mean
         mean_by_category_normalized = {}

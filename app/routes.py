@@ -299,7 +299,6 @@ def jobs():
                 jobs_status.append({job_id: 'done'})
             else:
                 jobs_status.append({job_id: 'running'})
-        webserver.lock.release()
 
     return jsonify({"status": "done", "data": jobs_status})
 
@@ -335,12 +334,11 @@ def index():
     index method is a GET endpoint that returns a welcome message and the defined routes.
     """
     routes = get_defined_routes()
-    msg = f"Hello, World!\n Interact with the webserver using one of the defined routes:\n"
+    msg = "Hello, World!\n Interact with the webserver using one of the defined routes:\n"
 
     # Display each route as a separate HTML <p> tag
     paragraphs = ""
-    for route in routes:
-        paragraphs += f"<p>{route}</p>"
+    paragraphs = ''.join(f"<p>{route}</p>" for route in routes)
 
     msg += paragraphs
     return msg

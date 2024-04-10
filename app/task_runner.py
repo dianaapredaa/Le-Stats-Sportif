@@ -77,9 +77,11 @@ class TaskRunner(Thread):
                 task.execute()
                 task.save_result()
                 self.task_done[task.job_id] = True
-                self.has_task = False
-            except Exception as e:
+            except (IOError, ValueError) as e:
                 print(f"Error processing task {task.job_id}: {e}")
+            finally:
+                self.has_task = False
+
 
 class Task:
     """
